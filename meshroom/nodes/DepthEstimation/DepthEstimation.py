@@ -5,8 +5,6 @@ import os
 from meshroom.core import desc
 from meshroom.core.utils import VERBOSE_LEVEL
 
-from moge_utils.moge_inference import moge_inference
-
 # models paths
 MOGE_MODEL_PATH = os.getenv('MOGE_MODEL_PATH')
 # VDA_MODEL_PATH = os.getenv('VDA_MODEL_PATH')
@@ -37,7 +35,7 @@ class DepthEstimation(desc.Node):
             name="model",
             label="Model",
             description="Model used during inference.",
-            values=["MoGe", "Video-Depth-Anything"],
+            values=["MoGe"], #, "Video-Depth-Anything"],
             value="MoGe",
         ),
         desc.BoolParam(
@@ -98,7 +96,8 @@ class DepthEstimation(desc.Node):
     ]
 
     def processChunk(self, chunk):
-        
+        from moge_utils.moge_inference import moge_inference
+
         try:
             chunk.logManager.start(chunk.node.verboseLevel.value)
             if not chunk.node.imagesFolder.value:
