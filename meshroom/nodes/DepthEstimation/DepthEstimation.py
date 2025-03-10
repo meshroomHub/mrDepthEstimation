@@ -75,14 +75,14 @@ class DepthEstimation(desc.Node):
             name='output',
             label='Output Folder',
             description="Output folder containing the estimated depth maps.",
-            value=desc.Node.internalFolder,
+            value="{nodeCacheFolder}",
         ),
         desc.File(
             name="depthMapVis",
             label="Depth Map Visualization",
             description="Color mapped output depth maps for visualization purpose",
             semantic="imageList",
-            value=desc.Node.internalFolder + '*/depth_vis.png',
+            value="{nodeCacheFolder}/*/depth_vis.png",
             group="",
         ),
         desc.File(
@@ -90,7 +90,7 @@ class DepthEstimation(desc.Node):
             label="Depth Map Output",
             description="Output depth maps",
             semantic="imageList",
-            value=desc.Node.internalFolder + '*/depth.exr',
+            value="{nodeCacheFolder}/*/depth.exr",
             group="",
         )
     ]
