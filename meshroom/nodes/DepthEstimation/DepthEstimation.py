@@ -7,7 +7,7 @@ from meshroom.core.utils import VERBOSE_LEVEL
 
 # models paths
 MOGE_MODEL_PATH = os.getenv('MOGE_MODEL_PATH')
-# VDA_MODEL_PATH = os.getenv('VDA_MODEL_PATH')
+VDA_MODEL_PATH = os.getenv('VDA_MODEL_PATH')
 
 class DepthEstimation(desc.Node):
     category = "Depth Estimation"
@@ -35,7 +35,7 @@ class DepthEstimation(desc.Node):
             name="model",
             label="Model",
             description="Model used during inference.",
-            values=["MoGe"], #, "Video-Depth-Anything"],
+            values=["MoGe", "Video-Depth-Anything"],
             value="MoGe",
         ),
         desc.BoolParam(
@@ -96,7 +96,6 @@ class DepthEstimation(desc.Node):
     ]
 
     def processChunk(self, chunk):
-        from moge_utils.moge_inference import moge_inference
 
         try:
             chunk.logManager.start(chunk.node.verboseLevel.value)
@@ -105,6 +104,7 @@ class DepthEstimation(desc.Node):
 
             # inference
             if chunk.node.model.value == 'MoGe':
+                from moge_utils.moge_inference import moge_inference
 
                 fov =  None if chunk.node.automaticFOVEstimation else chunk.node.horizontalFov.value
 
@@ -116,8 +116,16 @@ class DepthEstimation(desc.Node):
                         threshold = 0.03,
                         extension = chunk.node.inputExtension.value,
                         ply = chunk.node.saveMesh.value)
+
             elif chunk.node.model.value == 'Video-Depth-Anything':
-                chunk.logger.warning('Model not implemented yet')
+                from vda_utils.vda_inference import vda_inference
+
+                vda_inference(
+                    input_path=chunk.node.imagesFolder.value,
+                    output_path = chunk.node.output.value,
+                    pretrained_model= VDA_MODEL_PATH,
+                    extension= chunk.node.inputExtension.value
+                )
             
             chunk.logger.info('Publish end')
         finally:
