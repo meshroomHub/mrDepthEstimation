@@ -14,11 +14,12 @@ import trimesh.visual
 
 from moge.model import MoGeModel
 from moge.utils.io import save_glb, save_ply
-from moge.utils.vis import colorize_depth, colorize_normal
+from moge.utils.vis import colorize_normal
 import utils3d
 
 # oiio image loading and conversion if exr
 from img_proc.image import loadImage, writeImage
+from img_proc.depth_map import colorize_depth
 
 
 def moge_inference(
@@ -65,6 +66,7 @@ def moge_inference(
         # cv2.imwrite(str(save_path / 'image.jpg'), cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
         # writeImage(str(save_path / 'image.jpg'), img, h_tgt=h_ori, w_tgt=w_ori, pixelAspectRatio=par)
         cv2.imwrite(str(save_path / 'depth_vis.png'), cv2.cvtColor(colorize_depth(depth), cv2.COLOR_RGB2BGR))
+        cv2.imwrite(str(save_path / 'normals.png'), cv2.cvtColor(colorize_normal(normals), cv2.COLOR_RGB2BGR))
         cv2.imwrite(str(save_path / 'depth.exr'), depth, [cv2.IMWRITE_EXR_TYPE, cv2.IMWRITE_EXR_TYPE_FLOAT])
         cv2.imwrite(str(save_path / 'mask.png'), (mask * 255).astype(np.uint8))
         cv2.imwrite(str(save_path / 'points.exr'), cv2.cvtColor(points, cv2.COLOR_RGB2BGR), [cv2.IMWRITE_EXR_TYPE, cv2.IMWRITE_EXR_TYPE_FLOAT])
