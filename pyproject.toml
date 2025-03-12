@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mrDepthEstimation"
+description = "Custom Python nodes dedicated to Depth Estimation for Meshroom"
+version = "0.1"
+dependencies = [
+    'moge@https://github.com/meshroomHubWarehouse/MoGe.git#egg=meshroomMain',
+    'videoDepthAnything@https://github.com/meshroomHubWarehouse/Video-Depth-Anything.git#egg=meshroomMain',
+]
+
+[tool.setuptools.packages]
+find = {}
