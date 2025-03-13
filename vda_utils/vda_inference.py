@@ -60,4 +60,4 @@ def vda_inference(
         writeImage(str(save_path / 'depth_vis.png'), depth_vis, h_tgt=h, w_tgt=w, pixelAspectRatio=par)
 
         # save exr depth maps
-        cv2.imwrite(str(save_path / 'depth.exr'), depth, [cv2.IMWRITE_EXR_TYPE, cv2.IMWRITE_EXR_TYPE_FLOAT])
+        cv2.imwrite(str(save_path / 'depth.exr'), 1/depth, [cv2.IMWRITE_EXR_TYPE, cv2.IMWRITE_EXR_TYPE_FLOAT])
