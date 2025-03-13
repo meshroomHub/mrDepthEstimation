@@ -103,6 +103,7 @@ class DepthEstimation(desc.Node):
                 chunk.logger.warning('No input folder given.')
 
             # inference
+            chunk.logger.info(f'Starting inference with {chunk.node.model.value} model...')
             if chunk.node.model.value == 'MoGe':
                 from moge_utils.moge_inference import moge_inference
 
