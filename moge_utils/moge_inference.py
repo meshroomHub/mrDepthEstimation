@@ -58,6 +58,7 @@ def moge_inference(
         output = model.infer(image_tensor, fov_x=fov_x_)
         points, depth, mask, intrinsics = output['points'].cpu().numpy(), output['depth'].cpu().numpy(), output['mask'].cpu().numpy(), output['intrinsics'].cpu().numpy()
         normals, normals_mask = utils3d.numpy.points_to_normals(points, mask=mask)
+        normals = np.nan_to_num(normals, nan=0.0, posinf=1.0, neginf=0.0)
 
         # Write outputs
         save_path = Path(output_path, image_path.relative_to(input_path).parent, image_path.stem)
