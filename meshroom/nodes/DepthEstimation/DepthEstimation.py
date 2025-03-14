@@ -82,7 +82,7 @@ class DepthEstimation(desc.Node):
             label="Depth Map Visualization",
             description="Color mapped output depth maps for visualization purpose",
             semantic="imageList",
-            value="{nodeCacheFolder}/*/depth_vis.png",
+            value="{nodeCacheFolder}/depth_vis/*_depth_vis.png",
             group="",
         ),
         desc.File(
@@ -90,7 +90,7 @@ class DepthEstimation(desc.Node):
             label="Depth Map Output",
             description="Output depth maps",
             semantic="imageList",
-            value="{nodeCacheFolder}/*/depth.exr",
+            value="{nodeCacheFolder}/depth/*_depth.exr",
             group="",
         )
     ]
@@ -102,6 +102,21 @@ class DepthEstimation(desc.Node):
             if not chunk.node.imagesFolder.value:
                 chunk.logger.warning('No input folder given.')
 
+            from pathlib import Path
+            import itertools
+
+            extension = chunk.node.inputExtension.value
+            include_suffices = [extension.lower(), extension.upper()]
+
+            input_path = chunk.node.imagesFolder.value
+            if Path(input_path).is_dir():
+                image_paths = sorted(itertools.chain(*(Path(input_path).glob(f'*.{suffix}') for suffix in include_suffices)))
+            else:
+                raise ValueError(f"Input path '{input_path}' is not a directory.")
+
+            if len(image_paths) == 0:
+                raise FileNotFoundError(f'No image files found in {input_path}')
+
             # inference
             chunk.logger.info(f'Starting inference with {chunk.node.model.value} model...')
             if chunk.node.model.value == 'MoGe':
@@ -110,22 +125,20 @@ class DepthEstimation(desc.Node):
                 fov =  None if chunk.node.automaticFOVEstimation else chunk.node.horizontalFov.value
 
                 moge_inference(
-                        input_path=chunk.node.imagesFolder.value,
+                        input_image_paths=image_paths,
                         fov_x_= fov,
                         output_path = chunk.node.output.value,
                         pretrained_model = MOGE_MODEL_PATH,
                         threshold = 0.03,
-                        extension = chunk.node.inputExtension.value,
                         ply = chunk.node.saveMesh.value)
 
             elif chunk.node.model.value == 'Video-Depth-Anything':
                 from vda_utils.vda_inference import vda_inference
 
                 vda_inference(
-                    input_path=chunk.node.imagesFolder.value,
+                    input_image_paths=image_paths,
                     output_path = chunk.node.output.value,
-                    pretrained_model= VDA_MODEL_PATH,
-                    extension= chunk.node.inputExtension.value
+                    pretrained_model= VDA_MODEL_PATH
                 )
             
             chunk.logger.info('Publish end')

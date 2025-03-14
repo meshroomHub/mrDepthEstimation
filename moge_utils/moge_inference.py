@@ -23,30 +23,19 @@ from img_proc.depth_map import colorize_depth
 
 
 def moge_inference(
-    input_path: str,
+    input_image_paths: list,
     fov_x_: float,
     output_path: str,
     pretrained_model: str,
     threshold: float,
-    extension: str,
     ply: bool):
 
     device = torch.device('cuda')
-    
-    include_suffices = [extension.lower(), extension.upper()]
-    
-    if Path(input_path).is_dir():
-        image_paths = sorted(itertools.chain(*(Path(input_path).rglob(f'*.{suffix}') for suffix in include_suffices)))
-    else:
-        raise ValueError(f"Input path '{input_path}' is not a directory.")
-    
-    if len(image_paths) == 0:
-        raise FileNotFoundError(f'No image files found in {input_path}')
 
     model = MoGeModel.from_pretrained(pretrained_model).to(device).eval()
     
     # inference on each image
-    for image_path in (pbar := tqdm(image_paths, desc='Inference', disable=len(image_paths) <= 1)):
+    for image_path in (pbar := tqdm(input_image_paths, desc='Inference', disable=len(input_image_paths) <= 1)):
         
         # load images and convert exr from acescg -> sRGB
         img, h_ori, w_ori, par = loadImage(str(image_path), incolorspace='acescg') 
@@ -61,24 +50,40 @@ def moge_inference(
         normals = np.nan_to_num(normals, nan=0.0, posinf=1.0, neginf=0.0)
 
         # Write outputs
-        save_path = Path(output_path, image_path.relative_to(input_path).parent, image_path.stem)
-        save_path.mkdir(exist_ok=True, parents=True)
+        # save_path = Path(output_path , image_path.stem)
+        image_stem = str(image_path.stem)
 
-        # cv2.imwrite(str(save_path / 'image.jpg'), cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
-        # writeImage(str(save_path / 'image.jpg'), img, h_tgt=h_ori, w_tgt=w_ori, pixelAspectRatio=par)
-        cv2.imwrite(str(save_path / 'depth_vis.png'), cv2.cvtColor(colorize_depth(depth), cv2.COLOR_RGB2BGR))
-        cv2.imwrite(str(save_path / 'normals.png'), cv2.cvtColor(colorize_normal(normals), cv2.COLOR_RGB2BGR))
-        cv2.imwrite(str(save_path / 'depth.exr'), depth, [cv2.IMWRITE_EXR_TYPE, cv2.IMWRITE_EXR_TYPE_FLOAT])
-        cv2.imwrite(str(save_path / 'mask.png'), (mask * 255).astype(np.uint8))
-        cv2.imwrite(str(save_path / 'points.exr'), cv2.cvtColor(points, cv2.COLOR_RGB2BGR), [cv2.IMWRITE_EXR_TYPE, cv2.IMWRITE_EXR_TYPE_FLOAT])
+        vis_path = Path(output_path, "depth_vis")
+        vis_path.mkdir(exist_ok=True, parents=True)
+        vis_file_path = image_stem + "_depth_vis.png"
+
+        normal_path = Path(output_path, "normal")
+        normal_path.mkdir(exist_ok=True, parents=True)
+        normal_file_path = image_stem + "_normal.png"
+
+        depth_path = Path(output_path, "depth")
+        depth_path.mkdir(exist_ok=True, parents=True)
+        depth_file_path = image_stem + "_depth.exr"
+
+        cv2.imwrite(str(vis_path / vis_file_path), cv2.cvtColor(colorize_depth(depth), cv2.COLOR_RGB2BGR))
+        cv2.imwrite(str(normal_path / normal_file_path), cv2.cvtColor(colorize_normal(normals), cv2.COLOR_RGB2BGR))
+        cv2.imwrite(str(depth_path / depth_file_path), 1/depth, [cv2.IMWRITE_EXR_TYPE, cv2.IMWRITE_EXR_TYPE_FLOAT])
+
+        # cv2.imwrite(str(save_path / 'mask.png'), (mask * 255).astype(np.uint8))
+        # cv2.imwrite(str(save_path / 'points.exr'), cv2.cvtColor(points, cv2.COLOR_RGB2BGR), [cv2.IMWRITE_EXR_TYPE, cv2.IMWRITE_EXR_TYPE_FLOAT])
+
         fov_x, fov_y = utils3d.numpy.intrinsics_to_fov(intrinsics)
-        with open(save_path / 'fov.json', 'w') as f:
+        with open(Path(output_path) / 'fov.json', 'w') as f:
             json.dump({
                 'fov_x': round(float(np.rad2deg(fov_x)), 2),
                 'fov_y': round(float(np.rad2deg(fov_y)), 2),
             }, f)
 
         if ply:
+            ply_path = Path(output_path, "mesh")
+            ply_path.mkdir(exist_ok=True, parents=True)
+            ply_file_path = image_stem + "_mesh.ply"
+
             faces, vertices, vertex_colors, vertex_uvs = utils3d.numpy.image_mesh(
                     points,
                     img.astype(np.float32),
@@ -91,4 +96,4 @@ def moge_inference(
             vertices, vertex_uvs = vertices * [1, -1, -1], vertex_uvs * [1, -1] + [0, 1]
             
             # save_glb(save_path / 'mesh.glb', vertices, faces, vertex_uvs, img)
-            save_ply(save_path / 'mesh.ply', vertices, faces, vertex_colors)
+            save_ply(ply_path / ply_file_path, vertices, faces, vertex_colors)

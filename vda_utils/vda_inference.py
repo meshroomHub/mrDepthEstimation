@@ -13,29 +13,15 @@ from img_proc.depth_map import colorize_depth
 
 
 def vda_inference(
-        input_path : str,
+        input_image_paths : list,
         output_path: str,
-        pretrained_model : str,
-        extension : str):
+        pretrained_model : str):
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    include_suffices = [extension.lower(), extension.upper()]
-
-    if Path(input_path).is_dir():
-        image_paths = sorted(itertools.chain(*(Path(input_path).rglob(f'*.{suffix}') for suffix in include_suffices)))
-        # TODO : sort paths using Pyseq ?
-
-    else:
-        raise ValueError(f"Input path '{input_path}' is not a directory.")
-    
-    if len(image_paths) == 0:
-        raise FileNotFoundError(f'No image files found in {input_path}')
-    
     # load images
     frames = []
-
-    for image_path in image_paths:
+    for image_path in input_image_paths:
         frame, h, w, par = loadImage(str(image_path), incolorspace='acescg')
         frames.append(np.round(frame*255.0))
     frames = np.stack(frames, axis=0)
@@ -50,14 +36,22 @@ def vda_inference(
     depths, _ = model.infer_video_depth(frames, 24.0, input_size=518, device=device, fp32=False)
 
     # save images
-    for idx, image_path in enumerate(image_paths):
-        save_path = Path(output_path, image_path.relative_to(input_path).parent, image_path.stem)
-        save_path.mkdir(exist_ok=True, parents=True)
+    for idx, image_path in enumerate(input_image_paths):
+
+        image_stem = str(image_path.stem)
+
+        vis_path = Path(output_path, "depth_vis")
+        vis_path.mkdir(exist_ok=True, parents=True)
+        vis_file_path = image_stem + "_depth_vis.png"
+
+        depth_path = Path(output_path, "depth")
+        depth_path.mkdir(exist_ok=True, parents=True)
+        depth_file_path = image_stem + "_depth.exr"
 
         # save color mapped depth for visualization
         depth = depths[idx]
         depth_vis = colorize_depth(1/depth, mask=None, normalize=True, cmap = 'Spectral')
-        writeImage(str(save_path / 'depth_vis.png'), depth_vis, h_tgt=h, w_tgt=w, pixelAspectRatio=par)
+        writeImage(str(vis_path / vis_file_path), depth_vis, h_tgt=h, w_tgt=w, pixelAspectRatio=par)
 
         # save exr depth maps
-        cv2.imwrite(str(save_path / 'depth.exr'), 1/depth, [cv2.IMWRITE_EXR_TYPE, cv2.IMWRITE_EXR_TYPE_FLOAT])
+        cv2.imwrite(str(depth_path / depth_file_path), depth, [cv2.IMWRITE_EXR_TYPE, cv2.IMWRITE_EXR_TYPE_FLOAT])
