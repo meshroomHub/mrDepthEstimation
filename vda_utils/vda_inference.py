@@ -19,12 +19,15 @@ def vda_inference(
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+    # load sample image to get dimensions and define placeholder
+    sample_frame, h, w, par = loadImage(str(input_image_paths[0]), incolorspace='acescg')
+    c = sample_frame.shape[2]
+    frames = np.empty((len(input_image_paths), h, w, c), dtype=np.uint8)
+
     # load images
-    frames = []
-    for image_path in input_image_paths:
-        frame, h, w, par = loadImage(str(image_path), incolorspace='acescg')
-        frames.append(np.round(frame*255.0))
-    frames = np.stack(frames, axis=0)
+    for idx, image_path in enumerate(input_image_paths):
+        frame, _, _, _ = loadImage(str(image_path), incolorspace='acescg')
+        frames[idx] = np.round(frame*255.0).astype(np.uint8)
 
     # load model
     model_config = {'encoder': 'vits', 'features': 64, 'out_channels': [48, 96, 192, 384]}
