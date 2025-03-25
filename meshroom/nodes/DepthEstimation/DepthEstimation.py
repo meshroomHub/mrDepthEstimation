@@ -47,7 +47,7 @@ class DepthEstimation(desc.Node):
         desc.File(
             name="imagesFolder",
             label="Images Folder",
-            description="Input images to estimate the depth from",
+            description="Input images to estimate the depth from.",
             value="",
         ),
         desc.ChoiceParam(
@@ -93,10 +93,9 @@ class DepthEstimation(desc.Node):
             name="blockSize",
             label="Block Size",
             value=50,
-            description="Sets the number of images to process in one chunk. If set to 0, all images are processed at once",
+            description="Sets the number of images to process in one chunk. If set to 0, all images are processed at once.",
             range=(0, 1000, 1),
         ),
-
         desc.ChoiceParam(
             name="verboseLevel",
             label="Verbose Level",
