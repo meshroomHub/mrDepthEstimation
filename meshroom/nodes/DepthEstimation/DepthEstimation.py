@@ -26,17 +26,19 @@ class DepthEstimationBlockSize(desc.Parallelization):
         import math
 
         size = node.size
-        if node.attribute('blockSize').value:
+        if node.attribute('model').value == 'MoGe' and node.attribute('blockSize').value:
             nbBlocks = int(math.ceil(float(size) / float(node.attribute('blockSize').value)))
             return node.attribute('blockSize').value, size, nbBlocks
-        # case when block size is 0, only one block is used
+        # case when VDA model is used or when block size is 0, only one block is used
         else:
             return size, size, 1
 
 
 class DepthEstimation(desc.Node):
     category = "Depth Estimation"
-    documentation = """This node generates an estimated depth map from a monocular image sequence."""
+    documentation = """This node generates an estimated depth map from a monocular image sequence.
+                    The MoGe model is processing images one by one independently and can thus be parallelized in chunks. MoGe can also take fov as an input if the camera parameters are known. If not provided, it will estimate it. MoGe also saves an estimated normal map and can optionally save a mesh as a ply file.
+                    The Video-Depth-Anything model is processing the whole sequence at once which requires more memory but improves temporal consistency. When using this model, using lower resolution images is recommended."""
     
     gpu = desc.Level.INTENSIVE
 
@@ -79,7 +81,7 @@ class DepthEstimation(desc.Node):
             value=50.0,
             description="If camera parameters are known, set the horizontal field of view in degrees.",
             range=(0.0, 360.0, 1.0),
-            enabled=lambda node: not node.automaticFOVEstimation.value,
+            enabled=lambda node: not node.automaticFOVEstimation.value and node.model.value == "MoGe",
         ),
         
         desc.BoolParam(
@@ -95,6 +97,7 @@ class DepthEstimation(desc.Node):
             value=50,
             description="Sets the number of images to process in one chunk. If set to 0, all images are processed at once.",
             range=(0, 1000, 1),
+            enabled=lambda node: node.model.value == "MoGe"
         ),
         desc.ChoiceParam(
             name="verboseLevel",

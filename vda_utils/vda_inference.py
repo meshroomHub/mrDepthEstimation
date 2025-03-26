@@ -6,11 +6,12 @@ import itertools
 
 import cv2
 
-from video_depth_anything.video_depth import VideoDepthAnything
+from video_depth_anything.video_depth import OptimizedVideoDepthAnything
 
-from img_proc.image import loadImage, writeImage
+from img_proc.image import loadImage
 from img_proc.depth_map import colorize_depth
 
+import gc
 
 def vda_inference(
         input_image_paths : list,
@@ -29,14 +30,23 @@ def vda_inference(
         frame, _, _, _ = loadImage(str(image_path), incolorspace='acescg')
         frames[idx] = np.round(frame*255.0).astype(np.uint8)
 
+    org_video_len = frames.shape[0]
+
     # load model
     model_config = {'encoder': 'vits', 'features': 64, 'out_channels': [48, 96, 192, 384]}
-    model = VideoDepthAnything(**model_config)
+    model = OptimizedVideoDepthAnything(**model_config)
     model.load_state_dict(torch.load(pretrained_model, map_location='cpu'), strict=True)
     model = model.to(device).eval()
 
     # inference
-    depths, _ = model.infer_video_depth(frames, 24.0, input_size=518, device=device, fp32=False)
+    depths = model.infer_video_depth(frames, h, w, org_video_len, input_size=518, device=device, fp32=False)
+
+    # clear frames to save memory
+    del frames
+    gc.collect()
+
+    # align depths for temporal consistency
+    depths = model.align_depths(depths, org_video_len)
 
     # save images
     for idx, image_path in enumerate(input_image_paths):
@@ -54,7 +64,11 @@ def vda_inference(
         # save color mapped depth for visualization
         depth = depths[idx]
         depth_vis = colorize_depth(1/depth, mask=None, normalize=True, cmap = 'Spectral')
-        writeImage(str(vis_path / vis_file_path), depth_vis, h_tgt=h, w_tgt=w, pixelAspectRatio=par)
+        cv2.imwrite(str(vis_path / vis_file_path), cv2.cvtColor(depth_vis, cv2.COLOR_RGB2BGR))
 
         # save exr depth maps
         cv2.imwrite(str(depth_path / depth_file_path), depth, [cv2.IMWRITE_EXR_TYPE, cv2.IMWRITE_EXR_TYPE_FLOAT])
+
+    # clear depths to save memory
+    del depths
+    gc.collect()
