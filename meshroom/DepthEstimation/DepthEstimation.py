@@ -4,6 +4,9 @@ import os
 
 from meshroom.core import desc
 from meshroom.core.utils import VERBOSE_LEVEL
+from pyalicevision import sfmData
+from pyalicevision import sfmDataIO
+
 
 # models paths
 MOGE_MODEL_PATH = os.getenv('MOGE_MODEL_PATH')
@@ -42,14 +45,14 @@ class DepthEstimation(desc.Node):
     
     gpu = desc.Level.INTENSIVE
 
-    size = DepthEstimationNodeSize(['imagesFolder', 'inputExtension'])
+    size = DepthEstimationNodeSize(['inputImages', 'inputExtension'])
     parallelization = DepthEstimationBlockSize()
 
     inputs = [
         desc.File(
-            name="imagesFolder",
-            label="Images Folder",
-            description="Input images to estimate the depth from.",
+            name="inputImages",
+            label="Input Images",
+            description="Input images to estimate the depth from. Folder path or sfmData filepath",
             value="",
         ),
         desc.ChoiceParam(
@@ -135,7 +138,7 @@ class DepthEstimation(desc.Node):
 
     def preprocess(self, node):
         extension = node.inputExtension.value
-        input_path = node.imagesFolder.value
+        input_path = node.inputImages.value
 
         image_paths = get_image_paths_list(input_path, extension)
 
@@ -148,7 +151,7 @@ class DepthEstimation(desc.Node):
 
         try:
             chunk.logManager.start(chunk.node.verboseLevel.value)
-            if not chunk.node.imagesFolder.value:
+            if not chunk.node.inputImages.value:
                 chunk.logger.warning('No input folder given.')
 
             chunk_image_paths = self.image_paths[chunk.range.start:chunk.range.end]
@@ -190,6 +193,14 @@ def get_image_paths_list(input_path, extension):
 
     if Path(input_path).is_dir():
         image_paths = sorted(itertools.chain(*(Path(input_path).glob(f'*.{suffix}') for suffix in include_suffices)))
+    elif input_path[-4:].lower() == ".sfm":
+        if Path(input_path).exists():
+            dataAV = sfmData.SfMData()
+            if sfmDataIO.load(dataAV, input_path, sfmDataIO.ALL):
+                views = dataAV.getViews()
+                for id, v in views.items():
+                    image_paths.append(Path(v.getImage().getImagePath()))
+            image_paths.sort()
     else:
-        raise ValueError(f"Input path '{input_path}' is not a directory.")
+        raise ValueError(f"Input path '{input_path}' is not a valid path (folder or sfmData file).")
     return image_paths
