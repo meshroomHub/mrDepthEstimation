@@ -193,7 +193,7 @@ def get_image_paths_list(input_path, extension):
 
     if Path(input_path).is_dir():
         image_paths = sorted(itertools.chain(*(Path(input_path).glob(f'*.{suffix}') for suffix in include_suffices)))
-    elif input_path[-4:].lower() == ".sfm":
+    elif input_path[-4:].lower() in (".sfm", ".abc"):
         if Path(input_path).exists():
             dataAV = sfmData.SfMData()
             if sfmDataIO.load(dataAV, input_path, sfmDataIO.ALL):
