@@ -124,7 +124,7 @@ class DepthEstimation(desc.Node):
             description="Color mapped output depth maps for visualization purpose",
             semantic="imageList",
             value="{nodeCacheFolder}/depth_vis/*_depth_vis.png",
-            group="",
+            commandLineGroup="",
         ),
         desc.File(
             name="depthMap",
@@ -132,11 +132,11 @@ class DepthEstimation(desc.Node):
             description="Output depth maps",
             semantic="imageList",
             value="{nodeCacheFolder}/depth/*_depth.exr",
-            group="",
+            commandLineGroup="",
         )
     ]
 
-    def preprocess(self, node):
+    def get_image_paths(self, node):
         extension = node.inputExtension.value
         input_path = node.inputImages.value
 
@@ -148,12 +148,12 @@ class DepthEstimation(desc.Node):
         self.image_paths = image_paths
 
     def processChunk(self, chunk):
-
         try:
             chunk.logManager.start(chunk.node.verboseLevel.value)
             if not chunk.node.inputImages.value:
                 chunk.logger.warning('No input folder given.')
 
+            self.get_image_paths(chunk.node)
             chunk_image_paths = self.image_paths[chunk.range.start:chunk.range.end]
 
             # inference
